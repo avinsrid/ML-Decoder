@@ -40,7 +40,7 @@ R1 = H*ala1 + H_bar*ala2+[N11 N12];
 % R2 is the received signal on receiver 2 in format [r21 r22]
 R2 = G*ala1 + G_bar*ala2+[N11 N12];
 
-%{ This piece of code below I believe is incorrect as it will create:
+% This piece of code below I believe is incorrect as it will create:
 %[ r11 r12 ]
 %[ r21 r22 ]
 % We need the matrix R in format R = [r11 + r12; r21 + r22]

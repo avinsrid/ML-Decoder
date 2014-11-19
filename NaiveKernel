@@ -19,13 +19,13 @@ __kernel void func_squaremet( __global cfloat_t* MatAdjP,__global cfloat_t* r, _
            
            /* Calculating c_bar from s_bar */
 
-           temp1[0][0] = MatQ[0][0] * s_bar[0][0] + MatQ[0][1] * s_bar[1][0];
-           temp1[1][0] = MatQ[1][0] * s_bar[0][0] + MatQ[1][1] * s_bar[1][0];
+           temp1[0][0] = cfloat_add( cfloat_mul(MatQ[0][0] , s_bar[0][0]), cfloat_mul( MatQ[0][1] , s_bar[1][0]));
+           temp1[1][0] = cfloat_add( cfloat_mul(MatQ[1][0] , s_bar[0][0]), cfloat_mul( MatQ[1][1] , s_bar[1][0]));
 
-           temp2[2][1] = { {r[indexr] - temp1[0][0] } , {r[indexr + N] - temp1[1][0]} };
-           temp3[0][0] =  MatAdjP[0][0] * temp2[0][0] + MatAdjP[0][1] * temp2[1][0] ;
-           temp3[1][0] =  MatAdjP[1][0] * temp2[0][0] + MatAdjP[1][1] * temp2[1][0] ;
-           c_bar[2][1] =  { { (2/frobNorm) * temp3[0][0] } , { (2/frobNorm) * temp3[1][0] } };
+           temp2[2][1] = { {cfloat_add(r[indexr] ,-temp1[0][0]) } , {cfloat_add(r[indexr + N] , -temp1[1][0])} };
+           temp3[0][0] =  cfloat_add( cfloat_mul(MatAdjP[0][0] , temp2[0][0]) , cfloat_mul(MatAdjP[0][1] , temp2[1][0])) ;
+           temp3[1][0] =  cfloat_add( cfloat_mul(MatAdjP[1][0] , temp2[0][0]) , cfloat_mul(MatAdjP[1][1] , temp2[1][0])) ;
+           c_bar[2][1] =  { { cfloat_mul((2/frobNorm) , temp3[0][0]) } , { cfloat_mul((2/frobNorm) , temp3[1][0]) } };
 
            /* Code to calculate Frobenius norm and store it in square_met*/
  

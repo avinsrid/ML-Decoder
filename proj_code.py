@@ -21,7 +21,8 @@ N = 1
 # These are the symbols transmitted on Tx1 and Tx2
 # Format of symbols is :
 # [x11 x12 x21 x22 x31 x32 ........; x13 x14 x23 x24 x33 x34] (Similiar to MATLAB notation for column separation)
-x = np.random.randint(0, M, size = (2,N*2)).astype(np.complex64)
+x = np.array([[1 + 0j,2 + 0j],[2 + 0j,3 + 0j]])
+#x = np.random.randint(0, M, size = (2,N*2)).astype(np.complex64)
 x_mod = np.zeros_like(x)
 
 # Silver Code Matrix (Constant throughout code)
@@ -140,40 +141,33 @@ result_decode = np.zeros((2,N*2)).astype(np.complex64)
 for i in range(N) :
 	r = np.array([[rx_sym[0,i]],[rx_sym[1,i]]])
 	mean_sqr = 0
-	temp_1= 1000000 + 1000000j
+	temp= 100000 + 100000j
 	temp_index = 0
 	temp_s_bar = np.zeros((2,1)).astype(np.complex64)
 	temp_c_bar = np.zeros((2,1)).astype(np.complex64)
-	count = 0
 	# Iterate through every combination of x3' and x4' from constellation of M symbols
 	for j in range(M) :
 		for k in range(M):
 			# s_bar is tranpose([j k])
 			s_bar = np.array([[constellation[j]],[constellation[k]]], np.complex64)
 			Cs = np.dot(((2*P_adj)/(HfGf_sqr)),(r - np.dot(Q,s_bar)))
-
-			# Do slicing operation on Cs ( []/\ operator)
-			
-			for z in range(2) :
-				if Cs[z,0].real > 0 and Cs[z,0].imag > 0 :
-					Cs[z,0] = 1 + 1j
-				elif Cs[z,0].real > 0 and Cs[z,0].imag < 0 :
-					Cs[z,0] = 1 - 1j
-				elif Cs[z,0].real < 0 and Cs[z,0].imag > 0 :
-					Cs[z,0] = -1 + 1j
-				elif Cs[z,0].real < 0 and Cs[z,0].imag < 0 :
-					Cs[z,0] = -1 - 1j
-
-			print Cs
-			mean_sqr = (LA.norm(r - np.dot(P,Cs) - np.dot(Q,s_bar)))**2
-			#print mean_sqr
-			if mean_sqr < temp_1 :
-				temp_1 = mean_sqr
-				temp_index = count
+			#print Cs
+			# Take ceiling of x3'
+			x3_real = ((Cs[0,0].real)/(np.absolute(Cs[0,0].real)))*np.ceil(np.absolute(Cs[0,0].real))
+			x3_complex = ((Cs[0,0].imag)/(np.absolute(Cs[0,0].imag)))*np.ceil(np.absolute(Cs[0,0].imag))
+			# Take floor of x4'
+			x4_real = ((Cs[1,0].real)/(np.absolute(Cs[1,0].real)))*np.floor(np.absolute(Cs[1,0].real))
+			x4_complex = ((Cs[1,0].imag)/(np.absolute(Cs[1,0].imag)))*np.floor(np.absolute(Cs[1,0].imag))
+			Cs[0,0] = x3_real + x3_complex*j
+			Cs[1,0] = x4_real + x4_complex*j
+			mean_sqr = (LA.norm(r - np.dot(P,Cs) - np.dot(Q,s_bar), 'fro'))**2
+			print mean_sqr
+			print LA.norm(r - np.dot(P,Cs) - np.dot(Q,s_bar), 'fro')
+			if mean_sqr < temp :
+				temp = mean_sqr
 				temp_s_bar = s_bar
 				temp_c_bar = Cs
-			count+=1
-	#print "Least Sqr Metric = ", temp_1
+	print "Least Sqr Metric = ", temp
 	result_decode[0,2*i] = temp_c_bar[0,0]
 	result_decode[0,(2*i)+1] = temp_c_bar[1,0]
 	result_decode[1,2*i] = temp_s_bar[0,0]

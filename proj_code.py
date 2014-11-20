@@ -16,7 +16,7 @@ from numpy import linalg as LA
 M = 4
 
 # Number of received input symbols is N
-N = 20
+N = 2000
 
 # These are the symbols transmitted on Tx1 and Tx2
 # Format of symbols is :
@@ -50,17 +50,17 @@ for i in range(2) :
 #print M, " -QAM Modulated Input is ", x_mod
 
 # Generate channel matrix h = [h1 h2]
-h = np.array([[0.2254 - 0.9247*j, -0.3066 + 0.2423*j]]) #(1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
+h = np.array([[0.2254 - 0.9247j, -0.3066 + 0.2423j]]) #(1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
 # Generate channel matrix g = [g1 g2]
-g =  np.array([[2.5303 + 1.9583*j, -0.9545 + 2.1460*j]]) # (1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
+g =  np.array([[2.5303 + 1.9583j, -0.9545 + 2.1460j]]) # (1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
 # Generate h_bar = hV
 h_bar = np.dot(h,V)
 # Generate g_bar = gV
 g_bar = np.dot(g, V)
 # Generate noise matrix n1 = [n11, n12]
-n1 = 0.3802 + 1.2968*j #(1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
+n1 = 0.3802 + 1.2968j #(1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
 # Generate noise matrix n1 = [n11, n12]
-n2 = -1.5972 + 0.6096*j #(1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
+n2 = -1.5972 + 0.6096j #(1/(2**(0.5)))*np.random.random_sample((1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_sample((1,2)).astype(np.complex64)
 n = np.array([[0+0j, 0+0j]])
 #testprint
 print "h is ", h
@@ -167,19 +167,19 @@ for i in range(N) :
 	for j in range(M) :
 		for k in range(M):
 			# s_bar is tranpose([j k])
+			Cs = np.zeros((2,1)).astype(np.complex64)
 			s_bar = np.array([[constellation[j]],[constellation[k]]], np.complex64)
 			Cs = np.dot(((2*P_adj)/(HfGf_sqr)),(r - np.dot(Q,s_bar)))
 			# Take ceiling of x3'
-			print Cs,' ',((Cs[0,0].real)/(np.absolute(Cs[0,0].real)))*np.ceil(np.absolute(Cs[0,0].real)),' ', ((Cs[0,0].imag)/(np.absolute(Cs[0,0].imag)))*np.ceil(np.absolute(Cs[0,0].imag))
 			x3_real = ((Cs[0,0].real)/(np.absolute(Cs[0,0].real)))*np.ceil(np.absolute(Cs[0,0].real))
 			x3_complex = ((Cs[0,0].imag)/(np.absolute(Cs[0,0].imag)))*np.ceil(np.absolute(Cs[0,0].imag))
 			# Take floor of x4'
 			x4_real = ((Cs[1,0].real)/(np.absolute(Cs[1,0].real)))*np.floor(np.absolute(Cs[1,0].real))
 			x4_complex = ((Cs[1,0].imag)/(np.absolute(Cs[1,0].imag)))*np.floor(np.absolute(Cs[1,0].imag))
-			Cs[0,0] = x3_real + x3_complex*j
-			Cs[1,0] = x4_real + x4_complex*j
-			print Cs
-			mean_sqr = (LA.norm(r - np.dot(P,Cs) - np.dot(Q,s_bar), 'fro'))**2
+
+			Cs[0,0] = x3_real + 1j*x3_complex
+			Cs[1,0] = x4_real + 1j*x4_complex
+			mean_sqr = (LA.norm(r - np.dot(P,Cs) - np.dot(Q,s_bar), 2))**2
 			#print mean_sqr
 			if mean_sqr < temp :
 				temp = mean_sqr
@@ -195,7 +195,6 @@ for i in range(N) :
 print 'Input = ', x_mod
 print 'Decoded Result = ', result_decode
 
-print -1.1090213/np.absolute(-1.1090213)
 
 
 

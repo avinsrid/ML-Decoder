@@ -11,12 +11,105 @@ import time
 #import pyopencl as cl
 import numpy as np
 from numpy import linalg as LA
+import pyopencl as cl
+
+# Selecting OpenCL platform.
+NAME = 'NVIDIA CUDA'
+platforms = cl.get_platforms()
+devs = None
+for platform in platforms:
+	if platform.name == NAME:
+		devs = platform.get_devices()
+
+# Setting Command Queue.
+ctx = cl.Context(devs)
+queue = cl.CommandQueue(ctx)
+
+# You need to set the flags of the buffers you create properly; otherwise,
+# you might not be able to read or write them as needed:
+mf = cl.mem_flags
 
 # Maximum range for M-QAM is M i.e. 0,1,2,.....,M-1
 M = 4
-
 # Number of received input symbols is N
-N = 2000
+N = 1
+
+kernel = """
+#include <pyopencl-complex.h>   
+__kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __global cfloat_t* MatP, __global cfloat_t* MatQ, __global cfloat_t* MatAdjP, __global cfloat_t* QAMconstell, const int N,const int sizeQAM, const float frobNorm) {
+	/* Pick any two symbols from the constellation. this is x3 and x4 */
+
+	cfloat_t s_bar[2][1];
+	cfloat_t c_bar[2][1];
+	cfloat_t Pc[2][1];
+	cfloat_t Qs[2][1];
+	cfloat_t rQs[2][1];
+	cfloat_t cbar_temp[2][1];
+	cfloat_t tempMs[2][1];
+	cfloat_t decoded_sbar[2][1], decoded_cbar[2][1];
+	float ceil1, ceil2, floor1, floor2;
+	float temp = 10000.0 ;
+	float Ms;
+	unsigned int indexr = get_global_id(0);
+	for (int i = 0 ; i <  sizeQAM ; i++)
+	{
+		for(int j = 0 ; j < sizeQAM ; j++)
+		{
+           s_bar[0][0] = QAMconstell[i];
+           s_bar[1][0] = QAMconstell[j]; 
+
+           /* Calculating c_bar from s_bar */
+
+           /* Multiplying Q and s_bar matrices */
+           Qs[0][0] = cfloat_add(cfloat_mul(MatQ[0 + 0] , s_bar[0][0]), cfloat_mul( MatQ[0 + 1] , s_bar[1][0]));
+           Qs[1][0] = cfloat_add(cfloat_mul(MatQ[0 + 2] , s_bar[0][0]), cfloat_mul( MatQ[0 + 3] , s_bar[1][0]));
+
+           /* r - Qs */
+           rQs[0][0] = cfloat_add(r[indexr + 0] ,-Qs[0][0]);
+           rQs[1][0] = cfloat_add(r[indexr + N] , -Qs[1][0]);
+
+           /* Calculate c_bar */
+           cbar_temp[0][0] =  cfloat_add(cfloat_mul(MatAdjP[0 + 0] , rQs[0][0]) , cfloat_mul(MatAdjP[0 + 1] , rQs[1][0])) ;
+           cbar_temp[1][0] =  cfloat_add(cfloat_mul(MatAdjP[0 + 2] , rQs[0][0]) , cfloat_mul(MatAdjP[1 + 3] , rQs[1][0])) ;
+		   c_bar[0][0] =  cfloat_mul((2/frobNorm) , cbar_temp[0][0]);
+		   c_bar[1][0] = cfloat_mul((2/frobNorm) , cbar_temp[1][0]);
+
+		   /* Calculate ceiling of c_bar[0][0] and floor of c_bar[1][0] */
+		   ceil1 = fabs(cfloat_real(c_bar[0][0]));
+		   floor1 = fabs(cfloat_real(c_bar[1][0]));
+		   ceil2 = fabs(cfloat_imag(c_bar[0][0]));
+		   floor2 = fabs(cfloat_real(c_bar[1][0]));
+
+		   c_bar[0][0] = ceil1 + 1j*ceil2;
+		   c_bar[1][0] = floor1 + 1i*floor2;
+
+		   /* Multiplying P and c matrices */
+		   Pc[0][0] = cfloat_add(cfloat_mul(MatP[0 + 0], c_bar[0][0]), cfloat_mul(MatP[0 + 1], c_bar[1][0]));
+		   Pc[1][0] = cfloat_add(cfloat_mul(MatP[0 + 2], c_bar[0][0]), cfloat_mul(MatP[0 + 3], c_bar[1][0]));
+
+		   /* Calculate Ms */
+		   /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
+		   tempMs[0][0] = cfloat_add(r[indexr + 0], cfloat_add(-Pc[0][0], -Qs[0][0]));
+		   tempMs[1][0] = cfloat_add(r[indexr + N], cfloat_add(-Pc[1][0], -Qs[1][0]));
+		   Ms = pow(sqrt(pow((cfloat_real(tempMs[0][0])),2) + pow((cfloat_imag(tempMs[0][0])),2)) + sqrt(pow((cfloat_real(tempMs[1][0])),2) + pow((cfloat_imag(tempMs[1][0])),2)),2);
+ 		   
+ 		   /* Check if Ms < temp, if TRUE, then store Ms in temp and store decoded_sbar and decoded_cbar with their respective values */
+ 		   if (Ms < temp)
+ 		   {
+ 		   	decoded_cbar[0][0] = cfloat_real(c_bar[1][0]);
+ 		   	decoded_cbar[1][0] = cfloat_real(c_bar[1][0]);
+ 		   	decoded_sbar[0][0] = cfloat_real(c_bar[1][0]);
+ 		   	decoded_sbar[1][0] = cfloat_real(c_bar[1][0]);
+ 		   	temp = Ms;
+ 		   }
+ 		}
+	}
+	decoded[2*indexr] = decoded_cbar[0][0];
+	decoded[2*indexr+1] = decoded_cbar[1][0];
+	decoded[2*indexr + 2*N] = decoded_sbar[0][0];
+	decoded[2*indexr + 2*N +1] = decoded_sbar[1][0];
+}
+"""
 
 # These are the symbols transmitted on Tx1 and Tx2
 # Format of symbols is :
@@ -31,7 +124,7 @@ V = (1/7**(0.5))*np.array([[1-1j, 1-2j],[1+2j, -1-1j]])
 #print "Silver Code Matrix V is ", V
 
 # Generate array constellation for M-QAM, in our case M = 4
-constellation = np.array([-1-1j, -1+1j, 1+1j, 1-1j])
+constellation = np.array([-1-1j, -1+1j, 1+1j, 1-1j]).astype(np.complex64)
 
 # We will do modulation of the symbols, stored in x_mod
 for i in range(2) :
@@ -154,6 +247,7 @@ print np.dot(P_adj, P) # as verification for P_adj.P = 1/2(HfGf_sqr).I
 print np.dot(Q_adj, Q)
 # Initialize decoded matrix with all 0s (2x2 matrix)
 result_decode = np.zeros((2,N*2)).astype(np.complex64)
+opencl_recvsymbols = np.zeros_like(result_decode)
 
 # Perform Conditional Optimization here algorithm here and decode the received symbols correctly
 for i in range(N) :
@@ -195,7 +289,24 @@ for i in range(N) :
 print 'Input = ', x_mod
 print 'Decoded Result = ', result_decode
 
+opencl_recvsymbols = np.zeros_like(result_decode)
 
+# Create buffers
+r_buf =cl.Buffer(ctx, mf.WRITE_ONLY, opencl_recvsymbols.nbytes)
+input_received_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=rx_sym)
+P_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=P)
+Q_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Q)
+P_adj_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=P_adj)
+constellation_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=constellation)
 
+# Launch Kernel
+# Build kernel for decoding
+prg = cl.Program(ctx, kernel).build()
 
+prg.ml_decoder(queue, (N,) , None, r_buf, input_received_buf, P_buf, Q_buf, P_adj_buf, constellation_buf, np.int32(N), np.int32(M), np.float32(HfGf_sqr))
+
+# Copy output back from buffer
+cl.enqueue_copy(queue, opencl_recvsymbols, r_buf)
+
+print opencl_recvsymbols
 

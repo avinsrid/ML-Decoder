@@ -46,10 +46,16 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
 	cfloat_t rQs[2][1];
 	cfloat_t cbar_temp[2][1];
 	cfloat_t tempMs[2][1];
+	cfloat_t matq[2][2];
 	cfloat_t decoded_sbar[2][1], decoded_cbar[2][1];
 	float ceil1, ceil2, floor1, floor2;
 	float temp = 10000.0 ;
 	float Ms;
+	for (int i = 0; i< 2; i++)
+	{
+		for (int j = 0; j < 2; j++)
+		matq[i][j] = MatQ[i+j];
+	}
 	unsigned int indexr = get_global_id(0);
 	for (int i = 0 ; i <  sizeQAM ; i++)
 	{
@@ -74,18 +80,18 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
 		   c_bar[0][0] =  cfloat_mul((2/frobNorm) , cbar_temp[0][0]);
 		   c_bar[1][0] = cfloat_mul((2/frobNorm) , cbar_temp[1][0]);
 
-		   /* Calculate ceiling of c_bar[0][0] and floor of c_bar[1][0] */
-		   ceil1 = fabs(cfloat_real(c_bar[0][0]));
-		   floor1 = fabs(cfloat_real(c_bar[1][0]));
-		   ceil2 = fabs(cfloat_imag(c_bar[0][0]));
-		   floor2 = fabs(cfloat_real(c_bar[1][0]));
-
-		   c_bar[0][0] = ceil1 + 1j*ceil2;
-		   c_bar[1][0] = floor1 + 1i*floor2;
-
 		   /* Multiplying P and c matrices */
 		   Pc[0][0] = cfloat_add(cfloat_mul(MatP[0 + 0], c_bar[0][0]), cfloat_mul(MatP[0 + 1], c_bar[1][0]));
 		   Pc[1][0] = cfloat_add(cfloat_mul(MatP[0 + 2], c_bar[0][0]), cfloat_mul(MatP[0 + 3], c_bar[1][0]));
+
+		   /* Calculate ceiling of c_bar[0][0] and floor of c_bar[1][0] */
+		   ceil1 = ceil(fabs(cfloat_real(c_bar[0][0])));
+		   floor1 = floor(fabs(cfloat_real(c_bar[1][0])));
+		   ceil2 = ceil(fabs(cfloat_imag(c_bar[0][0])));
+		   floor2 = floor(fabs(cfloat_real(c_bar[1][0])));
+
+		   c_bar[0][0] = ceil1 + 1j*ceil2;
+		   c_bar[1][0] = floor1 + 1i*floor2;
 
 		   /* Calculate Ms */
 		   /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
@@ -96,10 +102,10 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
  		   /* Check if Ms < temp, if TRUE, then store Ms in temp and store decoded_sbar and decoded_cbar with their respective values */
  		   if (Ms < temp)
  		   {
- 		   	decoded_cbar[0][0] = cfloat_real(c_bar[1][0]);
- 		   	decoded_cbar[1][0] = cfloat_real(c_bar[1][0]);
- 		   	decoded_sbar[0][0] = cfloat_real(c_bar[1][0]);
- 		   	decoded_sbar[1][0] = cfloat_real(c_bar[1][0]);
+ 		   	decoded_cbar[0][0] = c_bar[0][0];
+ 		   	decoded_cbar[1][0] = c_bar[1][0];
+ 		   	decoded_sbar[0][0] = s_bar[0][0];
+ 		   	decoded_sbar[1][0] = s_bar[1][0];
  		   	temp = Ms;
  		   }
  		}

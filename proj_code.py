@@ -32,7 +32,7 @@ mf = cl.mem_flags
 # Maximum range for M-QAM is M i.e. 0,1,2,.....,M-1
 M = 4
 # Number of received input symbols is N
-N = 1
+N = 4
 
 kernel = """
 #include <pyopencl-complex.h>   
@@ -80,18 +80,19 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
 		   c_bar[0][0] =  cfloat_mul((2/frobNorm) , cbar_temp[0][0]);
 		   c_bar[1][0] = cfloat_mul((2/frobNorm) , cbar_temp[1][0]);
 
+
 		   /* Multiplying P and c matrices */
 		   Pc[0][0] = cfloat_add(cfloat_mul(MatP[0 + 0], c_bar[0][0]), cfloat_mul(MatP[0 + 1], c_bar[1][0]));
 		   Pc[1][0] = cfloat_add(cfloat_mul(MatP[0 + 2], c_bar[0][0]), cfloat_mul(MatP[0 + 3], c_bar[1][0]));
 
 		   /* Calculate ceiling of c_bar[0][0] and floor of c_bar[1][0] */
-		   ceil1 = ceil(fabs(cfloat_real(c_bar[0][0])));
-		   floor1 = floor(fabs(cfloat_real(c_bar[1][0])));
-		   ceil2 = ceil(fabs(cfloat_imag(c_bar[0][0])));
-		   floor2 = floor(fabs(cfloat_real(c_bar[1][0])));
+		   ceil1 = ((cfloat_real(c_bar[0][0]))/fabs(cfloat_real(c_bar[0][0])))*ceil(fabs(cfloat_real(c_bar[0][0])));
+		   floor1 = ((cfloat_real(c_bar[1][0]))/fabs(cfloat_real(c_bar[1][0])))*floor(fabs(cfloat_real(c_bar[1][0])));
+		   ceil2 = ((cfloat_imag(c_bar[0][0]))/fabs(cfloat_imag(c_bar[0][0])))*ceil(fabs(cfloat_imag(c_bar[0][0])));
+		   floor2 = ((cfloat_imag(c_bar[1][0]))/fabs(cfloat_imag(c_bar[1][0])))*floor(fabs(cfloat_imag(c_bar[1][0])));
 
-		   c_bar[0][0] = ceil1 + 1j*ceil2;
-		   c_bar[1][0] = floor1 + 1i*floor2;
+		   c_bar[0][0] = cfloat_new(ceil1, ceil2);
+		   c_bar[1][0] = cfloat_new(floor1, floor2);
 
 		   /* Calculate Ms */
 		   /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
@@ -222,11 +223,11 @@ for i in range(N) :
 print "Received matrix of 10 symbols is ", rx_sym
 
 # Generate P and Q matrices, P = tranpose([h;g]) and Q = transpose([h_bar;g_bar])
-P = np.array([[h[0,0], h[0,1]], [g[0,0], g[0,1]]])
+P = np.array([[h[0,0], h[0,1]], [g[0,0], g[0,1]]]).astype(np.complex64)
 #Q = np.array([[h_bar[0,0], h_bar[0,1]], [g_bar[0,0], g_bar[0,1]]])
 
 #P = np.array([[h[0,0], h[0,1]], [h_conj[0,1], -h_conj[0,0]]])
-Q = np.array([[h_bar[0,0], h_bar[0,1]], [g_bar[0,0], g_bar[0,1]]])
+Q = np.array([[h_bar[0,0], h_bar[0,1]], [g_bar[0,0], g_bar[0,1]]]).astype(np.complex64)
 #test print
 
 print "P matrix is ", P
@@ -242,9 +243,9 @@ print "(|H|f)^2 + (|G|f)^2 =  ", HfGf_sqr
 print "hbar square + gbar square = ", (LA.norm(h_bar, 'fro'))**2 + (LA.norm(g_bar, 'fro'))**2
 
 # Calculate adjoint(P). I could not find a function for this in numpy and hence manually performing it
-P_adj = np.array([[g[0,1], -h[0,1]],[-g[0,0], h[0,0]]])
+P_adj = np.array([[g[0,1], -h[0,1]],[-g[0,0], h[0,0]]]).astype(np.complex64)
 #P_adj = np.array([[-np.conjugate(h[0,0]), -np.conjugate(h[0,1])],[-h[0,1], h[0,0]]])
-Q_adj = np.array([[g_bar[0,1], -h_bar[0,1]], [-g_bar[0,0], h_bar[0,0]]])
+Q_adj = np.array([[g_bar[0,1], -h_bar[0,1]], [-g_bar[0,0], h_bar[0,0]]]).astype(np.complex64)
 #testprint
 print "adjoint(P) = ", P_adj
 print "adjoint(Q) = ", Q_adj

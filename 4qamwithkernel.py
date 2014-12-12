@@ -87,46 +87,46 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
                    if((cfloat_real(c_bar[0][0]) < 0.0) && (cfloat_imag(c_bar[0][0]) < 0.0))
                    {
  
-                    Cs[0][0] = -1-j;           
+                    Cs[0][0] = cfloat_new(-1,-1);           
                    }
                    if((cfloat_real(c_bar[0][0]) < 0.0) && (cfloat_imag(c_bar[0][0]) >0.0))
                    {
  
-                     Cs[0][0] = -1+j;           
+                     Cs[0][0] = cfloat_new(-1,1);           
                    }
 
                    if((cfloat_real(c_bar[0][0]) > 0.0) && (cfloat_imag(c_bar[0][0]) < 0.0))
                    {
  
-                     Cs[0][0] = 1-j;           
+                     Cs[0][0] = cfloat_new(1,-1);           
                    }
 
                    if((cfloat_real(c_bar[0][0]) > 0.0) && (cfloat_imag(c_bar[0][0]) > 0.0))
                    {
  
-                     Cs[0][0] = 1+j;           
+                     Cs[0][0] = cfloat_new(1,1);           
                    }
                    if((cfloat_real(c_bar[1][0]) < 0.0) && (cfloat_imag(c_bar[1][0]) < 0.0))
                    {
  
-                     Cs[0][0] = -1-j;           
+                     Cs[0][0] = cfloat_new(-1,-1);           
                    }
                    if((cfloat_real(c_bar[1][0]) < 0.0) && (cfloat_imag(c_bar[1][0]) >0.0))
                    {
  
-                     Cs[0][0] = -1+j;           
+                     Cs[0][0] = cfloat_new(-1,1);           
                    }
 
                    if((cfloat_real(c_bar[1][0]) > 0.0) && (cfloat_imag(c_bar[1][0]) < 0.0))
                    {
  
-                     Cs[0][0] = 1-j;           
+                     Cs[0][0] = cfloat_new(1,-1);           
                    }
 
                    if((cfloat_real(c_bar[1][0]) > 0.0) && (cfloat_imag(c_bar[1][0]) > 0.0))
                    {
  
-                     Cs[0][0] = 1+j;           
+                     Cs[0][0] = cfloat_new(1,1);           
                    }
 
                    /* Multiplying P and c matrices */

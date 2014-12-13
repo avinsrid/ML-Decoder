@@ -37,7 +37,7 @@ M = 4
 N = 120
 kernel = """
 #include <pyopencl-complex.h>   
-__kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __global cfloat_t* MatP, __global cfloat_t* MatQ, __global cfloat_t* MatAdjP, __global cfloat_t* QAMconstell, const int N,const int sizeQAM, const float frobNorm) {
+__kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __global cfloat_t* MatP, __global cfloat_t* MatQ, __global cfloat_t* MatInvP, __global cfloat_t* QAMconstell, const int N,const int sizeQAM, const float frobNorm) {
         /* Pick any two symbols from the constellation. this is x3 and x4 */
 
         cfloat_t s_bar[2][1];
@@ -49,7 +49,6 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
         cfloat_t tempMs[2][1];
         cfloat_t matq[2][2];
         cfloat_t decoded_sbar[2][1], decoded_cbar[2][1];
-        float ceil1, ceil2, floor1, floor2;
         float temp = 10000.0 ;
         float Ms;
         cfloat_t Cs[2][1];
@@ -77,56 +76,69 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
            rQs[1][0] = cfloat_add(r[indexr + N] , -Qs[1][0]);
 
            /* Calculate c_bar */
-           cbar_temp[0][0] =  cfloat_add(cfloat_mul(MatAdjP[0 + 0] , rQs[0][0]) , cfloat_mul(MatAdjP[0 + 1] , rQs[1][0])) ;
-           cbar_temp[1][0] =  cfloat_add(cfloat_mul(MatAdjP[0 + 2] , rQs[0][0]) , cfloat_mul(MatAdjP[1 + 3] , rQs[1][0])) ;
-                   c_bar[0][0] =  cfloat_mul((2/frobNorm) , cbar_temp[0][0]);
-                   c_bar[1][0] = cfloat_mul((2/frobNorm) , cbar_temp[1][0]);
-
-                   
+           cbar_temp[0][0] =  cfloat_add(cfloat_mul(MatInvP[0 + 0] , rQs[0][0]) , cfloat_mul(MatInvP[0 + 1] , rQs[1][0])) ;
+           cbar_temp[1][0] =  cfloat_add(cfloat_mul(MatInvP[0 + 2] , rQs[0][0]) , cfloat_mul(MatInvP[0 + 3] , rQs[1][0])) ;
+                   c_bar[0][0] =  cbar_temp[0][0];
+                   c_bar[1][0] = cbar_temp[1][0];
 
                    if((cfloat_real(c_bar[0][0]) < 0.0) && (cfloat_imag(c_bar[0][0]) < 0.0))
                    {
- 
-                    Cs[0][0] = -1-j;           
+ 					float temp_real = -1.0;
+ 					float temp_imag = -1.0;
+                    Cs[0][0] = cfloat_new(temp_real, temp_imag);           
                    }
-                   if((cfloat_real(c_bar[0][0]) < 0.0) && (cfloat_imag(c_bar[0][0]) >0.0))
+                   if((cfloat_real(c_bar[0][0]) < 0.0) && (cfloat_imag(c_bar[0][0]) > 0.0))
                    {
  
-                     Cs[0][0] = -1+j;           
+                    float temp_real = -1.0;
+ 					float temp_imag = 1.0;
+                    Cs[0][0] = cfloat_new(temp_real, temp_imag);           
                    }
 
                    if((cfloat_real(c_bar[0][0]) > 0.0) && (cfloat_imag(c_bar[0][0]) < 0.0))
                    {
  
-                     Cs[0][0] = 1-j;           
+                    float temp_real = 1.0;
+ 					float temp_imag = -1.0;
+                    Cs[0][0] = cfloat_new(temp_real, temp_imag);           
                    }
 
                    if((cfloat_real(c_bar[0][0]) > 0.0) && (cfloat_imag(c_bar[0][0]) > 0.0))
                    {
  
-                     Cs[0][0] = 1+j;           
+                    float temp_real = 1.0;
+ 					float temp_imag = 1.0;
+                    Cs[0][0] = cfloat_new(temp_real, temp_imag);           
                    }
                    if((cfloat_real(c_bar[1][0]) < 0.0) && (cfloat_imag(c_bar[1][0]) < 0.0))
                    {
  
-                     Cs[0][0] = -1-j;           
+                    float temp_real = -1.0;
+ 					float temp_imag = -1.0;
+                    Cs[1][0] = cfloat_new(temp_real, temp_imag);           
                    }
                    if((cfloat_real(c_bar[1][0]) < 0.0) && (cfloat_imag(c_bar[1][0]) >0.0))
                    {
  
-                     Cs[0][0] = -1+j;           
+                    float temp_real = -1.0;
+ 					float temp_imag = 1.0;
+                    Cs[1][0] = cfloat_new(temp_real, temp_imag);           
                    }
 
                    if((cfloat_real(c_bar[1][0]) > 0.0) && (cfloat_imag(c_bar[1][0]) < 0.0))
                    {
  
-                     Cs[0][0] = 1-j;           
+                    float temp_real = 1.0;
+ 					float temp_imag = -1.0;
+                    Cs[1][0] = cfloat_new(temp_real, temp_imag);           
                    }
 
                    if((cfloat_real(c_bar[1][0]) > 0.0) && (cfloat_imag(c_bar[1][0]) > 0.0))
                    {
  
-                     Cs[0][0] = 1+j;           
+                    float temp_real = 1.0;
+ 					float temp_imag = 1.0;
+                    Cs[1][0] = cfloat_new(temp_real, temp_imag);           
                    }
 
                    /* Multiplying P and c matrices */
@@ -138,7 +150,7 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
                    /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
                    tempMs[0][0] = cfloat_add(r[indexr + 0], cfloat_add(-Pc[0][0], -Qs[0][0]));
                    tempMs[1][0] = cfloat_add(r[indexr + N], cfloat_add(-Pc[1][0], -Qs[1][0]));
-                   Ms = pow(sqrt(pow((cfloat_real(tempMs[0][0])),2) + pow((cfloat_imag(tempMs[0][0])),2)) + sqrt(pow((cfloat_real(tempMs[1][0])),2) + pow((cfloat_imag(tempMs[1][0])),2)),2);
+                   Ms = pow((cfloat_real(tempMs[0][0])),2) + pow((cfloat_imag(tempMs[0][0])),2) + pow((cfloat_real(tempMs[1][0])),2) + pow((cfloat_imag(tempMs[1][0])),2);
                    
                    /* Check if Ms < temp, if TRUE, then store Ms in temp and store decoded_sbar and decoded_cbar with their respective values */
                    if (Ms < temp)
@@ -162,6 +174,7 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
 # Format of symbols is :
 # [x11 x12 x21 x22 x31 x32 ........; x13 x14 x23 x24 x33 x34] (Similiar to MATLAB notation for column separation)
 #x = np.array([[0 + 0j,0 + 0j],[0 + 0j,0 + 0j]])
+#x = np.array([[0, 0],[0, 0]]).astype(np.complex64)
 x = np.random.randint(0, M, size = (2,N*2)).astype(np.complex64)
 x_mod = np.zeros_like(x)
 #print x
@@ -194,11 +207,11 @@ for i in range(2) :
 
 # Generate channel matrix h = [h1 h2]
 #h = np.array([[0.2254 - 0.9247j, -0.3066 + 0.2423j]]) 
-h =(1/(2**(0.5)))*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64)
+h =(1/(2**(0.5)))*np.random.random_integers(1, 2, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, 2, size=(1,2)).astype(np.complex64)
 #h = np.array([[1.0001+0j, 1.00002+0j]]).astype(np.complex64)
 # Generate channel matrix g = [g1 g2]
 #g =  np.array([[2.5303 + 1.9583j, -0.9545 + 2.1460j]]) g = 
-g = (1/(2**(0.5)))*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64)
+g = (1/(2**(0.5)))*np.random.random_integers(1, 2, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, 2, size=(1,2)).astype(np.complex64)
 #g = np.array([[1.00002+0j, 1.00001+0j]]).astype(np.complex64)
 # Generate h_bar = hV
 h_bar = np.dot(h,V)
@@ -358,7 +371,7 @@ for i in range(N) :
 
 			Cs[0,0] = x1_real + 1j*x1_complex
 			Cs[1,0] = x2_real + 1j*x2_complex
-			mean_sqr = (LA.norm(r - np.dot(P,Cs) - np.dot(Q,s_bar), 2))**2
+			mean_sqr = (LA.norm(r - np.dot(P,Cs) - np.dot(Q,s_bar), 'fro'))**2
 			#print mean_sqr
 			if mean_sqr < temp :
 				temp = mean_sqr
@@ -373,7 +386,7 @@ for i in range(N) :
 #print Cs_array
 #print x
 #print 'Input = ', x_mod
-#print 'Decoded Result = ', result_decode
+print 'Decoded Result = ', result_decode
 
 symbol_err = 0
 for i in range(2) :
@@ -386,13 +399,12 @@ for i in range(2) :
 bit_err = 0.0
 for i in range(2) :
 	for j in range(N*2) :
-		print x_mod[i][j]
 		if x_mod[i][j] in mapper :
 			xor_val = mapper.get(x_mod[i][j])^mapper.get(result_decode[i][j])
 			bit_err += bin(xor_val).count("1")
-#print "Number of incorrect bits received = ", bit_err
-#print "Total number of bits transmitted = ", 2 * 4 * N
-#print "Bit error rate = ", bit_err/(2*4*N)
+print "Number of incorrect bits received = ", bit_err
+print "Total number of bits transmitted = ", 2 * 4 * N
+print "Bit error rate = ", bit_err/(2*4*N)
 
 opencl_recvsymbols = np.zeros_like(result_decode)
 
@@ -401,17 +413,28 @@ r_buf =cl.Buffer(ctx, mf.WRITE_ONLY, opencl_recvsymbols.nbytes)
 input_received_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=rx_sym)
 P_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=P)
 Q_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Q)
-P_adj_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=P_adj)
+P_inv_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=inv_P)
 constellation_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=constellation)
 
 # Launch Kernel
 # Build kernel for decoding
 prg = cl.Program(ctx, kernel).build()
 
-prg.ml_decoder(queue, (N,) , None, r_buf, input_received_buf, P_buf, Q_buf, P_adj_buf, constellation_buf, np.int32(N), np.int32(M), np.float32(HfGf_sqr))
+prg.ml_decoder(queue, (N,) , None, r_buf, input_received_buf, P_buf, Q_buf, P_inv_buf, constellation_buf, np.int32(N), np.int32(M), np.float32(HfGf_sqr))
 
 # Copy output back from buffer
 cl.enqueue_copy(queue, opencl_recvsymbols, r_buf)
+print opencl_recvsymbols
 
 #print opencl_recvsymbols
 print 'equal:    ', np.allclose(opencl_recvsymbols, result_decode)
+
+bit_err = 0.0
+for i in range(2) :
+	for j in range(N*2) :
+		if x_mod[i][j] in mapper :
+			xor_val = mapper.get(x_mod[i][j])^mapper.get(opencl_recvsymbols[i][j])
+			bit_err += bin(xor_val).count("1")
+print "Number of incorrect bits received = ", bit_err
+print "Total number of bits transmitted = ", 2 * 4 * N
+print "Bit error rate = ", bit_err/(2*4*N)

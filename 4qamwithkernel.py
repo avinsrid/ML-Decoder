@@ -83,62 +83,95 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
 
                    if((cfloat_real(c_bar[0][0]) < 0.0) && (cfloat_imag(c_bar[0][0]) < 0.0))
                    {
+<<<<<<< HEAD
  					float temp_real = -1.0;
  					float temp_imag = -1.0;
                     Cs[0][0] = cfloat_new(temp_real, temp_imag);           
+=======
+ 
+                    Cs[0][0] = cfloat_new(-1,-1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
                    if((cfloat_real(c_bar[0][0]) < 0.0) && (cfloat_imag(c_bar[0][0]) > 0.0))
                    {
  
+<<<<<<< HEAD
                     float temp_real = -1.0;
  					float temp_imag = 1.0;
                     Cs[0][0] = cfloat_new(temp_real, temp_imag);           
+=======
+                     Cs[0][0] = cfloat_new(-1,1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
 
                    if((cfloat_real(c_bar[0][0]) > 0.0) && (cfloat_imag(c_bar[0][0]) < 0.0))
                    {
  
+<<<<<<< HEAD
                     float temp_real = 1.0;
  					float temp_imag = -1.0;
                     Cs[0][0] = cfloat_new(temp_real, temp_imag);           
+=======
+                     Cs[0][0] = cfloat_new(1,-1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
 
                    if((cfloat_real(c_bar[0][0]) > 0.0) && (cfloat_imag(c_bar[0][0]) > 0.0))
                    {
  
+<<<<<<< HEAD
                     float temp_real = 1.0;
  					float temp_imag = 1.0;
                     Cs[0][0] = cfloat_new(temp_real, temp_imag);           
+=======
+                     Cs[0][0] = cfloat_new(1,1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
                    if((cfloat_real(c_bar[1][0]) < 0.0) && (cfloat_imag(c_bar[1][0]) < 0.0))
                    {
  
+<<<<<<< HEAD
                     float temp_real = -1.0;
  					float temp_imag = -1.0;
                     Cs[1][0] = cfloat_new(temp_real, temp_imag);           
+=======
+                     Cs[0][0] = cfloat_new(-1,-1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
                    if((cfloat_real(c_bar[1][0]) < 0.0) && (cfloat_imag(c_bar[1][0]) >0.0))
                    {
  
+<<<<<<< HEAD
                     float temp_real = -1.0;
  					float temp_imag = 1.0;
                     Cs[1][0] = cfloat_new(temp_real, temp_imag);           
+=======
+                     Cs[0][0] = cfloat_new(-1,1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
 
                    if((cfloat_real(c_bar[1][0]) > 0.0) && (cfloat_imag(c_bar[1][0]) < 0.0))
                    {
  
+<<<<<<< HEAD
                     float temp_real = 1.0;
  					float temp_imag = -1.0;
                     Cs[1][0] = cfloat_new(temp_real, temp_imag);           
+=======
+                     Cs[0][0] = cfloat_new(1,-1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
 
                    if((cfloat_real(c_bar[1][0]) > 0.0) && (cfloat_imag(c_bar[1][0]) > 0.0))
                    {
  
+<<<<<<< HEAD
                     float temp_real = 1.0;
  					float temp_imag = 1.0;
                     Cs[1][0] = cfloat_new(temp_real, temp_imag);           
+=======
+                     Cs[0][0] = cfloat_new(1,1);           
+>>>>>>> 24859b0fecfd7c85f47030a885c197fdcdfe1b49
                    }
 
                    /* Multiplying P and c matrices */

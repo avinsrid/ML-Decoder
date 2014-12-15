@@ -49,22 +49,18 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
         cfloat_t tempMs[2][1];
         cfloat_t matq[2][2];
         cfloat_t decoded_sbar[2][1], decoded_cbar[2][1];
-        float temp_real = 10000.0;
-	float temp_imag = 10000.0;
-        cfloat_t temp =0;
         float Ms;
         cfloat_t Cs[2][1];
         float x1_temp_real= 0; 
-  	float x1_temp_imag =0;
+  		float x1_temp_imag =0;
         float x2_temp_real = 0;
-  	float x2_temp_imag=0;
+  		float x2_temp_imag=0;
         float x1_real=0;
         float x1_imag=0;
         float x2_real=0;
         float x2_imag=0;
         float euclid_dist = 0;
-        float temp_dist = 1000000000;
-        temp = cfloat_new(temp_real,temp_imag);
+        float temp = 1000000.0;
         for (int i = 0; i< 2; i++)
         {
                 for (int j = 0; j < 2; j++)
@@ -91,59 +87,61 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
            /* Calculate c_bar */
            cbar_temp[0][0] =  cfloat_add(cfloat_mul(MatInvP[0 + 0] , rQs[0][0]) , cfloat_mul(MatInvP[0 + 1] , rQs[1][0])) ;
            cbar_temp[1][0] =  cfloat_add(cfloat_mul(MatInvP[0 + 2] , rQs[0][0]) , cfloat_mul(MatInvP[0 + 3] , rQs[1][0])) ;
-                   c_bar[0][0] =  cbar_temp[0][0];
-                   c_bar[1][0] = cbar_temp[1][0];
+           c_bar[0][0] =  cbar_temp[0][0];
+           c_bar[1][0] =  cbar_temp[1][0];
 
-                   x1_temp_real = cfloat_real(c_bar[0][0]); 
-                   x1_temp_imag = cfloat_imag(c_bar[0][0]);  
+           x1_temp_real = cfloat_real(c_bar[0][0]); 
+           x1_temp_imag = cfloat_imag(c_bar[0][0]);  
 
-                   x2_temp_real = cfloat_real(c_bar[1][0]); 
-                   x2_temp_imag = cfloat_imag(c_bar[1][0]); 
-                   for ( int k = 0 ; k < sizeQAM ; k++)
-  		   {
-			euclid_dist = (pow((pow(x1_temp_real - cfloat_real(QAMconstell[k]),2.0)) + (pow(x1_temp_imag - cfloat_imag(QAMconstell[k]),2.0))),0.5);
-			if(euclid_dist < temp_dist)
-			{
-			  temp_dist = euclid_dist;
-			  x1_real   = cfloat_real(QAMconstell[k]);
-			  x1_imag   = cfloat_imag(QAMconstell[k]);
-			}
-    		    }
- 		    temp_dist = 1000000000;
+           x2_temp_real = cfloat_real(c_bar[1][0]); 
+           x2_temp_imag = cfloat_imag(c_bar[1][0]);
+           float temp_dist = 10000000000.0;
+           for ( int k = 0 ; k < sizeQAM ; k++)
+  		    {
+				euclid_dist = pow(pow(x1_temp_real - cfloat_real(QAMconstell[k]),2.0) + pow(x1_temp_imag - cfloat_imag(QAMconstell[k]),2.0),0.5);
+				if(euclid_dist < temp_dist)
+				{
+					temp_dist = euclid_dist;
+					x1_real   = cfloat_real(QAMconstell[k]);
+					x1_imag   = cfloat_imag(QAMconstell[k]);
+				}
+    		}
+ 		   temp_dist = 1000000000.0;
 		   for ( int k = 0 ; k < sizeQAM ; k++)
-                   {
-                        euclid_dist = (pow((pow(x2_temp_real - cfloat_real(QAMconstell[k]),2.0)) + (pow(x2_temp_imag - cfloat_imag(QAMconstell[k]),2.0))),0.5);
-                        if(euclid_dist < temp_dist)
-                        {
-                          temp_dist = euclid_dist;
-                          x2_real   = cfloat_real(QAMconstell[k]);
-                          x2_imag   = cfloat_imag(QAMconstell[k]);
-                        }
-                    }
-  			
-                    Cs[0][0] = cfloat_new(x1_real,x1_imag);
- 		    Cs[1][0] = cfloat_new(x2_real,x2_imag);
-                   /* Multiplying P and c matrices */
-                   Pc[0][0] = cfloat_add(cfloat_mul(MatP[0 + 0], Cs[0][0]), cfloat_mul(MatP[0 + 1], Cs[1][0]));
-                   Pc[1][0] = cfloat_add(cfloat_mul(MatP[0 + 2], Cs[0][0]), cfloat_mul(MatP[0 + 3], Cs[1][0]));
-
-
-                   /* Calculate Ms */
-                   /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
-                   tempMs[0][0] = cfloat_add(r[indexr + 0], cfloat_add(-Pc[0][0], -Qs[0][0]));
-                   tempMs[1][0] = cfloat_add(r[indexr + N], cfloat_add(-Pc[1][0], -Qs[1][0]));
-                   Ms = pow((cfloat_real(tempMs[0][0])),2) + pow((cfloat_imag(tempMs[0][0])),2) + pow((cfloat_real(tempMs[1][0])),2) + pow((cfloat_imag(tempMs[1][0])),2);
-                   
-                   /* Check if Ms < temp, if TRUE, then store Ms in temp and store decoded_sbar and decoded_cbar with their respective values */
-                   if (Ms < temp)
-                   {
-                        decoded_cbar[0][0] = Cs[0][0];
-                        decoded_cbar[1][0] = Cs[1][0];
-                        decoded_sbar[0][0] = s_bar[0][0];
-                        decoded_sbar[1][0] = s_bar[1][0];
-                        temp = Ms;
-                   }
+            {
+                euclid_dist = pow(pow(x2_temp_real - cfloat_real(QAMconstell[k]),2.0) + pow(x2_temp_imag - cfloat_imag(QAMconstell[k]),2.0),0.5);
+                if(euclid_dist < temp_dist)
+                {
+                    temp_dist = euclid_dist;
+                    x2_real   = cfloat_real(QAMconstell[k]);
+                    x2_imag   = cfloat_imag(QAMconstell[k]);
                 }
+            }
+  			
+            Cs[0][0] = cfloat_new(x1_real,x1_imag);
+ 		    Cs[1][0] = cfloat_new(x2_real,x2_imag);
+            
+            /* Multiplying P and c matrices */
+            Pc[0][0] = cfloat_add(cfloat_mul(MatP[0 + 0], Cs[0][0]), cfloat_mul(MatP[0 + 1], Cs[1][0]));
+            Pc[1][0] = cfloat_add(cfloat_mul(MatP[0 + 2], Cs[0][0]), cfloat_mul(MatP[0 + 3], Cs[1][0]));
+
+
+            /* Calculate Ms */
+            /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
+            tempMs[0][0] = cfloat_add(r[indexr + 0], cfloat_add(-Pc[0][0], -Qs[0][0]));
+            tempMs[1][0] = cfloat_add(r[indexr + N], cfloat_add(-Pc[1][0], -Qs[1][0]));
+            Ms = pow((cfloat_real(tempMs[0][0])),2) + pow((cfloat_imag(tempMs[0][0])),2) + pow((cfloat_real(tempMs[1][0])),2) + pow((cfloat_imag(tempMs[1][0])),2);
+                   
+            /* Check if Ms < temp, if TRUE, then store Ms in temp and store decoded_sbar and decoded_cbar with their respective values */
+            if (Ms < temp)
+            {
+                decoded_cbar[0][0] = Cs[0][0];
+                decoded_cbar[1][0] = Cs[1][0];
+                decoded_sbar[0][0] = s_bar[0][0];
+                decoded_sbar[1][0] = s_bar[1][0];
+                temp = Ms;
+            }
+           } 
         }
         decoded[2*indexr] = decoded_cbar[0][0];
         decoded[2*indexr+1] = decoded_cbar[1][0];
@@ -207,10 +205,10 @@ for i in range(2) :
 			x_mod[i,j] = 1 + 1j
 
 # Generate channel matrix h = [h1 h2]
-h =(1/(2**(0.5)))*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64)
+h =(1/(2**(0.5)))*np.random.random_integers(1, 3, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, 3, size=(1,2)).astype(np.complex64)
 #h = np.array([[1.0001+0j, 1.00002+0j]]).astype(np.complex64)
 # Generate channel matrix g = [g1 g2]
-g = (1/(2**(0.5)))*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, N/40, size=(1,2)).astype(np.complex64)
+g = (1/(2**(0.5)))*np.random.random_integers(1, 3, size=(1,2)).astype(np.complex64) + (1/(2**(0.5)))*1j*np.random.random_integers(1, 3, size=(1,2)).astype(np.complex64)
 
 # Generate h_bar = hV
 h_bar = np.dot(h,V)
@@ -222,7 +220,7 @@ n1 = np.random.normal(0,1)
 n2 = np.random.normal(0,1)
 
 # Generate noise matrix n1 = [n11, n12]
-n = np.array([[0, 0]])
+n = np.array([[n1, n2]])
 
 print "h is ", h
 print "g is ", g
@@ -416,6 +414,6 @@ for i in range(2) :
                         xor_val = mapper.get(x_mod[i][j])^mapper.get(opencl_recvsymbols[i][j])
                         bit_err += bin(xor_val).count("1")
 print "Number of incorrect bits received = ", bit_err
-print "Total number of bits transmitted = ", 2 * 4 * N
-print "Bit error rate = ", bit_err/(2*4*N)
+print "Total number of bits transmitted = ", 4 * 4 * N
+print "Bit error rate = ", bit_err/(4*4*N)
 

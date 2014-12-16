@@ -56,7 +56,7 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
         local cfloat_t Qs[2][1];
         local cfloat_t rQs[2][1];
         cfloat_t cbar_temp[2][1];
-        local cfloat_t tempMs[2][1];
+        __local cfloat_t tempMs[2][1];
         cfloat_t matq[2][2];
         cfloat_t decoded_sbar[2][1], decoded_cbar[2][1];
         float Ms;

@@ -72,9 +72,6 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
         float euclid_dist = 0;
         float temp = 1000000.0;
 
-        //rx_local[0] = r[indexr + 0];
-        //rx_local[1] = r[indexr + N];
-
         rx_local[lx][ly] = r[row*N + col];
         barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -92,7 +89,6 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
            Qs[1][0] = cfloat_add(cfloat_mul(MatQ[0 + 2] , s_bar[0][0]), cfloat_mul( MatQ[0 + 3] , s_bar[1][0]));
 
            /* r - Qs */
-           // rQs[0][0] = cfloat_add(rx_local[lx][ly] ,-Qs[0][0]);
            rQs[lx][0] = cfloat_add(rx_local[lx][ly] , -Qs[lx][0]);
            barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -140,7 +136,6 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
 
             /* Calculate Ms */
             /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
-            //tempMs[0][0] = cfloat_add(rx_local[0], cfloat_add(-Pc[0][0], -Qs[0][0]));
             tempMs[lx][0] = cfloat_add(rx_local[lx][ly], cfloat_add(-Pc[lx][0], -Qs[lx][0]));
             barrier(CLK_LOCAL_MEM_FENCE);
 

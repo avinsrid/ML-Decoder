@@ -34,31 +34,31 @@ mf = cl.mem_flags
 # Maximum range for M-QAM is M i.e. 0,1,2,.....,M-1
 M = 16
 # Number of received input symbols is N
-N = 120
+N = 16
 kernel = """
 #include <pyopencl-complex.h>   
-__kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __global cfloat_t* MatP, __global cfloat_t* MatQ, __global cfloat_t* MatInvP, __global cfloat_t* QAMconstell, const int N,const int sizeQAM, const float frobNorm) {
+__kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __global cfloat_t* MatP, __global cfloat_t* MatQ, __global cfloat_t* MatInvP, __global cfloat_t* QAMconstell, __global float* Ms_buf const int N,const int sizeQAM) {
         /* Pick any two symbols from the constellation. this is x3 and x4 */
 
-        unsigned int row = get_global_id(0);
-        unsigned int col = get_global_id(1);
         unsigned int lx = get_local_id(0);
         unsigned int ly = get_local_id(1);
 
         // Local Memory Variables
-        __local cfloat_t rx_local[2][1];
-        __local cfloat_t tempMs[2][1];
-        __local cfloat_t rQs[2][1];
-        __local cfloat_t Qs[2][1];
+        __local cfloat_t C_bar[2][256];
+        __local cfloat_t S_bar[2][256];
 
         // Private Memory Variables
+
         cfloat_t s_bar[2][1];
         cfloat_t c_bar[2][1];
         cfloat_t Pc[2][1];
+        cfloat_t Qs[2][1];
+        cfloat_t rQs[2][1];
         cfloat_t cbar_temp[2][1];
+        __local cfloat_t tempMs[2][256];
         cfloat_t matq[2][2];
         cfloat_t decoded_sbar[2][1], decoded_cbar[2][1];
-        float Ms;
+        __local float Ms[256];
         cfloat_t Cs[2][1];
         float x1_temp_real= 0; 
   		float x1_temp_imag =0;
@@ -71,37 +71,35 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
         float euclid_dist = 0;
         float temp = 1000000.0;
 
-        rx_local[lx][ly] = r[row*N + col];
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        for (int i = 0 ; i <  sizeQAM ; i++)
-        {
-                for(int j = 0 ; j < sizeQAM ; j++)
-                {
-           s_bar[0][0] = QAMconstell[i];
-           s_bar[1][0] = QAMconstell[j]; 
-
+           Ms_buf[get_group_id(1)] = 1000000.0
+           S_bar[0][16*lx + ly] = QAMconstell[lx];
+           S_bar[1][16*lx + ly] = QAMconstell[ly]; 
+           barrier(CLK_LOCAL_MEM_FENCE);
            /* Calculating c_bar from s_bar */
 
            /* Multiplying Q and s_bar matrices */
-           Qs[0][0] = cfloat_add(cfloat_mul(MatQ[0 + 0] , s_bar[0][0]), cfloat_mul( MatQ[0 + 1] , s_bar[1][0]));
-           Qs[1][0] = cfloat_add(cfloat_mul(MatQ[0 + 2] , s_bar[0][0]), cfloat_mul( MatQ[0 + 3] , s_bar[1][0]));
+           Qs[0][0] = cfloat_add(cfloat_mul(MatQ[0 + 0] , S_bar[0][16*lx + ly]), cfloat_mul( MatQ[0 + 1] , S_bar[1][16*lx + ly]));
+           Qs[1][0] = cfloat_add(cfloat_mul(MatQ[0 + 2] , S_bar[0][16*lx + ly]), cfloat_mul( MatQ[0 + 3] , S_bar[1][16*lx + ly]));
+           barrier(CLK_LOCAL_MEM_FENCE);
 
            /* r - Qs */
-           rQs[lx][0] = cfloat_add(rx_local[lx][ly] , -Qs[lx][0]);
-           barrier(CLK_LOCAL_MEM_FENCE);
+           rQs[0][0] = cfloat_add(r[get_group_id(1) + 0] ,-Qs[0][0]);
+           rQs[1][0] = cfloat_add(r[get_group_id(1) + N] , -Qs[1][0]);
 
            /* Calculate c_bar */
            cbar_temp[0][0] =  cfloat_add(cfloat_mul(MatInvP[0 + 0] , rQs[0][0]) , cfloat_mul(MatInvP[0 + 1] , rQs[1][0])) ;
            cbar_temp[1][0] =  cfloat_add(cfloat_mul(MatInvP[0 + 2] , rQs[0][0]) , cfloat_mul(MatInvP[0 + 3] , rQs[1][0])) ;
-           c_bar[0][0] =  cbar_temp[0][0];
-           c_bar[1][0] =  cbar_temp[1][0];
+           C_bar[0][16*lx + ly] =  cbar_temp[0][0];
+           C_bar[1][16*lx + ly] =  cbar_temp[1][0];
+           barrier(CLK_LOCAL_MEM_FENCE);
 
-           x1_temp_real = cfloat_real(c_bar[0][0]); 
-           x1_temp_imag = cfloat_imag(c_bar[0][0]);  
+           x1_temp_real = cfloat_real(C_bar[0][16*lx + ly]); 
+           x1_temp_imag = cfloat_imag(C_bar[0][16*lx + ly]);  
 
-           x2_temp_real = cfloat_real(c_bar[1][0]); 
-           x2_temp_imag = cfloat_imag(c_bar[1][0]);
+           x2_temp_real = cfloat_real(C_bar[1][16*lx + ly]); 
+           x2_temp_imag = cfloat_imag(C_bar[1][16*lx + ly]);
+           barrier(CLK_LOCAL_MEM_FENCE);
+
            float temp_dist = 10000000000.0;
            for ( int k = 0 ; k < sizeQAM ; k++)
   		    {
@@ -125,37 +123,32 @@ __kernel void ml_decoder(__global cfloat_t* decoded, __global cfloat_t* r, __glo
                 }
             }
   			
-            Cs[0][0] = cfloat_new(x1_real,x1_imag);
- 		    Cs[1][0] = cfloat_new(x2_real,x2_imag);
-            
-            /* Multiplying P and c matrices */
-            Pc[0][0] = cfloat_add(cfloat_mul(MatP[0 + 0], Cs[0][0]), cfloat_mul(MatP[0 + 1], Cs[1][0]));
-            Pc[1][0] = cfloat_add(cfloat_mul(MatP[0 + 2], Cs[0][0]), cfloat_mul(MatP[0 + 3], Cs[1][0]));
+            C_bar[0][16*lx + ly] = cfloat_new(x1_real,x1_imag);
+ 		    C_bar[1][16*lx + ly] = cfloat_new(x2_real,x2_imag);
+            barrier(CLK_LOCAL_MEM_FENCE);            
 
+            /* Multiplying P and c matrices */
+            Pc[0][0] = cfloat_add(cfloat_mul(MatP[0 + 0], C_bar[0][16*lx + ly]), cfloat_mul(MatP[0 + 1], C_bar[1][16*lx + ly]));
+            Pc[1][0] = cfloat_add(cfloat_mul(MatP[0 + 2], C_bar[0][16*lx + ly]), cfloat_mul(MatP[0 + 3], C_bar[1][16*lx + ly]));
+            barrier(CLK_LOCAL_MEM_FENCE);
 
             /* Calculate Ms */
             /* First, we calculate the complex numbers' abs and then proceed with over all ||Ms|| calculation */
-            tempMs[lx][0] = cfloat_add(rx_local[lx][ly], cfloat_add(-Pc[lx][0], -Qs[lx][0]));
+            tempMs[0][16*lx + ly] = cfloat_add(r[get_group_id(0) + 0], cfloat_add(-Pc[0][0], -Qs[0][0]));
+            tempMs[1][16*lx + ly] = cfloat_add(r[get_group_id(0) + N], cfloat_add(-Pc[1][0], -Qs[1][0]));
+            barrier(CLK_LOCAL_MEM_FENCE);
+            Ms[16*lx + ly] = pow((cfloat_real(tempMs[0][16*lx+ly])),2) + pow((cfloat_imag(tempMs[0][16*lx+ly])),2) + pow((cfloat_real(tempMs[1][16*lx+ly])),2) + pow((cfloat_imag(tempMs[1][16*lx+ly])),2);
+            barrier(CLK_LOCAL_MEM_FENCE);    
+
+            /* Check if Ms < temp, if TRUE, then store Ms in temp and store decoded_sbar and decoded_cbar with their respective values */
+  			
+  			if (Ms[16*lx + ly] < )
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            Ms = pow((cfloat_real(tempMs[0][0])),2) + pow((cfloat_imag(tempMs[0][0])),2) + pow((cfloat_real(tempMs[1][0])),2) + pow((cfloat_imag(tempMs[1][0])),2);
-                   
-            /* Check if Ms < temp, if TRUE, then store Ms in temp and store decoded_sbar and decoded_cbar with their respective values */
-            if (Ms < temp)
-            {
-                decoded_cbar[0][0] = Cs[0][0];
-                decoded_cbar[1][0] = Cs[1][0];
-                decoded_sbar[0][0] = s_bar[0][0];
-                decoded_sbar[1][0] = s_bar[1][0];
-                temp = Ms;
-            }
-           } 
-        }
-        
-        decoded[2*col] = decoded_cbar[0][0];
-        decoded[2*col+1] = decoded_cbar[1][0];
-        decoded[2*col + 2*N] = decoded_sbar[0][0];
-        decoded[2*col + 2*N +1] = decoded_sbar[1][0];
+        decoded[2*get_group_id(1)] = decoded_cbar[0][0];
+        decoded[2*get_group_id(1) + 1] = decoded_cbar[1][0];
+        decoded[2*get_group_id(1) + 2*N] = decoded_sbar[0][0];
+        decoded[2*get_group_id(1) + 2*N +1] = decoded_sbar[1][0];
         
 
 }
@@ -174,6 +167,8 @@ V = (1/7**(0.5))*np.array([[1-1j, 1-2j],[1+2j, -1-1j]])
 
 # Generate array constellation for M-QAM, in our case M = 4
 constellation = np.array([-3 - 3j, -3 -1j, -3 + 3j, -3 + 1j, -1 - 3j, -1 - 1j, -1 + 3j, -1 + 1j, 3 - 3j, 3 - 1j, 3 + 3j, 3 + 1j, 1 - 3j, 1 - 1j, 1 + 3j, 1 + 1j]).astype(np.complex64)
+#constellation_matrix = np..array([[-3 - 3j, -3 -1j, -3 + 3j, -3 + 1j], [-1 - 3j, -1 - 1j, -1 + 3j, -1 + 1j], [3 - 3j, 3 - 1j, 3 + 3j, 3 + 1j], [1 - 3j, 1 - 1j, 1 + 3j, 1 + 1j]]).astype(np.complex64)
+
 
 mapper = {}
 for i in range(M) :
@@ -397,19 +392,21 @@ print "Total number of bits transmitted = ", 4 * 4 * N
 print "Bit error rate = ", bit_err/(4*4*N)
 opencl_recvsymbols = np.zeros_like(result_decode)
 
+Ms_temp = np.zeros(rx_sym)
 # Create buffers
 r_buf =cl.Buffer(ctx, mf.WRITE_ONLY, opencl_recvsymbols.nbytes)
+ms_buf =cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, Ms_temp.nbytes)
 input_received_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=rx_sym)
 P_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=P)
 Q_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Q)
 P_inv_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=inv_P)
 constellation_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=constellation)
-
+#constellation_matrix_buf = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=constellation_matrix)
 # Launch Kernel
 # Build kernel for decoding
 prg = cl.Program(ctx, kernel).build()
 
-prg.ml_decoder(queue, (2,N) , (2,1), r_buf, input_received_buf, P_buf, Q_buf, P_inv_buf, constellation_buf, np.int32(N), np.int32(M), np.float32(HfGf_sqr))
+prg.ml_decoder(queue, (M,M*N) , (M,M), r_buf, input_received_buf, P_buf, Q_buf, P_inv_buf, constellation_buf, ms_buf, np.int32(N), np.int32(M))
 
 # Copy output back from buffer
 cl.enqueue_copy(queue, opencl_recvsymbols, r_buf)

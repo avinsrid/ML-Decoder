@@ -365,7 +365,7 @@ for j in range(1,13):
 		result_decode[0,(2*i)+1] = temp_c_bar[1,0]
 		result_decode[1,2*i] = temp_s_bar[0,0]
 		result_decode[1, (2*i)+1] = temp_s_bar[1,0]
-print "Size" , N " CPU running time ", time.time()-start
+	print "Size" , N " CPU running time ",time.time()-start
 
 	##print Cs_array
 	#print x
@@ -400,8 +400,8 @@ print "Size" , N " CPU running time ", time.time()-start
 	# Launch Kernel
 	# Build kernel for decoding
 	prg = cl.Program(ctx, kernel).build()
-    start = time.time()
-	prg.ml_decoder(queue, (N,) , None, r_buf, input_received_buf, P_buf, Q_buf, P_inv_buf, constellation_buf, np.int32(N), np.int32(M), np.float32(HfGf_sqr)).wait
+	start = time.time()
+	prg.ml_decoder(queue, (N,) , None, r_buf, input_received_buf, P_buf, Q_buf, P_inv_buf, constellation_buf, np.int32(N), np.int32(M), np.float32(HfGf_sqr)).wait()
 	print "Size ", N "Running time GPU" ,time.time()-start 
 
 	# Copy output back from buffer
@@ -409,7 +409,7 @@ print "Size" , N " CPU running time ", time.time()-start
 	#print opencl_recvsymbols
 
 	##print opencl_recvsymbols
-	print 'equal:    ', np.allclose(opencl_recvsymbols, result_decode)
+	#print 'equal:    ', np.allclose(opencl_recvsymbols, result_decode)
 
 	bit_err = 0.0
 	for i in range(2) :

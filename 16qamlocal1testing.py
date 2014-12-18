@@ -377,7 +377,7 @@ for j in range(1,6):
 		result_decode[0,(2*i)+1] = temp_c_bar[1,0]
 		result_decode[1,2*i] = temp_s_bar[0,0]
 		result_decode[1, (2*i)+1] = temp_s_bar[1,0]
-	print"N is : "N*4,"Running time CPU:",time.time()-start
+	print"N is : ",N*4,"Running time CPU:",time.time()-start
 	##print Cs_array
 	#print x
 	#print 'Input = ', x_mod
